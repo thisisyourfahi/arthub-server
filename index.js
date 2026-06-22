@@ -65,11 +65,32 @@ async function run() {
 
         // get artworks of an artist by atristId
         app.get('/api/my/artworks/:id', async (req, res) => {
-            console.log('/api/my/artworks')
             const id = req.params.id
             const cursor = artworkCollection.find({artistId: id});
             const artworks = await cursor.toArray();
             res.send(artworks  || []);
+        })
+
+        // update an arwork
+        app.patch('/api/my/artworks/update/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = {_id: new ObjectId(id)};
+            const data = req.body;
+            const updatedArtwork = {
+                $set: {
+                    ...data,
+                    updatedAt: new Date()
+                }
+            }
+            const result = await artworkCollection.updateOne(filter, updatedArtwork)
+            res.send(result);
+        })
+
+        // delete an artwork
+        app.delete('/api/my/artworks/delete/:id', async (req, res) => {
+            const id = req.params.id;
+            const result = await artworkCollection.deleteOne({_id: new ObjectId(id)});
+            res.send(result);
         })
         
         app.get('/', (req, res) => {
