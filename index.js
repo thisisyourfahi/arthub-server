@@ -28,9 +28,9 @@ async function run() {
 
         // user related apis
         // get all users
-        app.get('/api/users', async(req, res) => {
+        app.get('/api/users', async (req, res) => {
             if (req.query.Id) {
-                const user = await usersCollection.findOne({_id: new ObjectId(req.query.Id)})
+                const user = await usersCollection.findOne({ _id: new ObjectId(req.query.Id) })
                 return res.send(user);
             }
             const cursor = usersCollection.find();
@@ -53,12 +53,21 @@ async function run() {
         // get artworks
         app.get('/api/artworks', async (req, res) => {
             const query = {};
-            if (req.query.artId) {                
+            if (req.query.artId) {
                 query._id = new ObjectId(req.query.artId);
                 const art = await artworkCollection.findOne(query);
                 return res.send(art || {});
             }
-            const cursor = artworkCollection.find();
+            if (req.query.category) {
+                query.category = req.query.category;
+            }
+            if (req.query.search) {
+                query.$or = [
+                    { title: { $regex: req.query.search, $options: 'i' } },
+                    { description: { $regex: req.query.search, $options: 'i' } },
+                ]
+            }
+            const cursor = artworkCollection.find(query);
             const artworks = await cursor.toArray();
             res.send(artworks || [])
         })
@@ -66,15 +75,15 @@ async function run() {
         // get artworks of an artist by atristId
         app.get('/api/my/artworks/:id', async (req, res) => {
             const id = req.params.id
-            const cursor = artworkCollection.find({artistId: id});
+            const cursor = artworkCollection.find({ artistId: id });
             const artworks = await cursor.toArray();
-            res.send(artworks  || []);
+            res.send(artworks || []);
         })
 
         // update an arwork
         app.patch('/api/my/artworks/update/:id', async (req, res) => {
             const id = req.params.id;
-            const filter = {_id: new ObjectId(id)};
+            const filter = { _id: new ObjectId(id) };
             const data = req.body;
             const updatedArtwork = {
                 $set: {
@@ -89,10 +98,10 @@ async function run() {
         // delete an artwork
         app.delete('/api/my/artworks/delete/:id', async (req, res) => {
             const id = req.params.id;
-            const result = await artworkCollection.deleteOne({_id: new ObjectId(id)});
+            const result = await artworkCollection.deleteOne({ _id: new ObjectId(id) });
             res.send(result);
         })
-        
+
         app.get('/', (req, res) => {
             res.send('ArtHub server is running.')
         })
