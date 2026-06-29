@@ -25,6 +25,8 @@ async function run() {
         const db = client.db('arthub_db');
         const usersCollection = db.collection('user');
         const artworkCollection = db.collection('artworks');
+        const subscriptionCollection = db.collection('subscriptions');
+        const purhcaseCollection = db.collection('purchase');
 
         // user related apis
         // get all users
@@ -33,7 +35,11 @@ async function run() {
                 const user = await usersCollection.findOne({ _id: new ObjectId(req.query.Id) })
                 return res.send(user);
             }
-            const cursor = usersCollection.find();
+            const query = {};
+            if (req.query.role) {
+                query.role = req.query.role
+            }
+            const cursor = usersCollection.find(query);
             const users = await cursor.toArray();
             res.send(users)
         })
@@ -100,6 +106,59 @@ async function run() {
             const id = req.params.id;
             const result = await artworkCollection.deleteOne({ _id: new ObjectId(id) });
             res.send(result);
+        })
+
+        // purchase an artwork
+        app.post('/api/purchase', async (req, res) => {
+            // This should:
+            // 1. Push artworkId into purchaseArtworksId
+            // 3. (Optional) Create a Purchase collection/document
+            const data = req.body;
+            const purchaseInfo = {
+                ...data,
+                time: new Date()
+            }
+            const addPurchase = await purhcaseCollection.insertOne(purchaseInfo);
+            
+            // push into purchaseartworks
+            const filter = { _id: new ObjectId(data.buyerId) };
+            const updateDoc = {
+                $push: {
+                    purchaseArtworksId: data.artworkId
+                },
+            }
+            const updateResult = await usersCollection.updateOne(filter, updateDoc);
+
+            // update the artwork's status to 'sold'
+            const artworkFilter = { _id: new ObjectId(data.artworkId) };
+            const artworkUpdateDoc = {
+                $set: {
+                    status: 'sold'
+                }
+            }
+            const artworkUpdateResult = await artworkCollection.updateOne(artworkFilter, artworkUpdateDoc);
+            res.send({})
+        })
+
+        // subscription related apis
+        // subscribe to an artist
+        app.post('/api/subscriptions', async (req, res) => {
+            const data = req.body;
+            const subInfo = {
+                ...data,
+                createdAt: new Date()
+            }
+            const result = await subscriptionCollection.insertOne(subInfo);
+
+            const filter = { email: data.email };
+            const updateDoc = {
+                $set: {
+                    plan: data.planId
+                }
+            }
+            const updateResult = await usersCollection.updateMany(filter, updateDoc);
+            console.log('Subscription added and user plan updated:', updateResult);
+            res.send(updateResult);
         })
 
         app.get('/', (req, res) => {
