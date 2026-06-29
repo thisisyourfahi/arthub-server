@@ -44,6 +44,18 @@ async function run() {
             res.send(users)
         })
 
+        // get users purchase histroy 
+        app.get('/api/purchase', async (req, res) => {
+            const query = {}
+            if (req.query.buyerId) {
+                query.buyerId = req.query.buyerId;
+            }
+            console.log(query);
+            const cursor = purhcaseCollection.find(query);
+            const result = await cursor.toArray();
+            res.send(result);
+        })
+
         // artwork related apis
         // post an artwork
         app.post('/api/artworks', async (req, res) => {
